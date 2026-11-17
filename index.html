@@ -1,0 +1,395 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Don Chelo | Sistema de Ventas</title>
+<style>
+:root {
+  --azul: #1E3555;
+  --fondo: #F3F6FA;
+  --turquesa: #38A3A5;
+  --blanco: #FFFFFF;
+  --texto: #243247;
+  --borde: #DCE4EC;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: Arial, sans-serif;
+}
+header {
+  background: var(--azul);
+  color: white;
+  padding: 20px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+header h1 { margin: 0; font-size: 25px; }
+header p { margin: 5px 0 0; font-size: 13px; }
+button, input, select { font: inherit; }
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 15px;
+  cursor: pointer;
+  font-weight: bold;
+}
+button:disabled { opacity: .45; cursor: not-allowed; }
+.primary { background: var(--turquesa); color: white; }
+.secondary { background: #E7EEF5; color: var(--azul); }
+.danger { background: #FBE5E5; color: #A12626; }
+nav { display: flex; gap: 8px; }
+main { padding: 22px; max-width: 1450px; margin: auto; }
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  gap: 20px;
+}
+.panel {
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  box-shadow: 0 4px 14px #1e35550b;
+}
+h2 { color: var(--azul); margin-top: 0; }
+.categories { display: flex; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
+.categories button.active { background: var(--azul); color: white; }
+input, select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  margin: 8px 0 14px;
+}
+.products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  gap: 12px;
+}
+.product {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  padding: 18px 10px;
+  text-align: center;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.product:hover { border-color: var(--turquesa); }
+.product:disabled { opacity: .5; }
+.emoji { font-size: 32px; display: block; margin-bottom: 10px; }
+.product strong { display: block; margin-bottom: 7px; }
+small { color: #66758A; }
+.ticket-item {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--borde);
+}
+.ticket-item .line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.controls { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.controls button { padding: 5px 11px; }
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  font-size: 22px;
+  font-weight: bold;
+}
+.full { width: 100%; margin-top: 8px; }
+.hidden { display: none !important; }
+.notice {
+  padding: 14px;
+  border-radius: 9px;
+  background: #E6F5F4;
+  margin: 14px 0;
+}
+.error { background: #FCE9E9; color: #9B2525; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+.stat { background: var(--fondo); padding: 20px; border-radius: 12px; }
+.stat strong { display: block; font-size: 25px; margin-top: 8px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--borde); }
+@media(max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🥖 Don Chelo</h1>
+    <p>Panadería & Minimarket | Punto de Venta</p>
+  </div>
+  <nav>
+    <button class="primary" onclick="showScreen('sales')">Ventas</button>
+    <button class="secondary" onclick="showScreen('admin')">Administración</button>
+  </nav>
+</header>
+
+<main>
+  <section id="sales" class="layout">
+    <div class="panel">
+      <h2>Registrar venta</h2>
+      <label for="search">Buscar producto</label>
+      <input id="search" placeholder="Escribe el nombre del producto..." oninput="renderProducts()">
+      <div class="categories" id="categories"></div>
+      <div class="products" id="products"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Ticket de venta</h2>
+      <div id="ticket"></div>
+      <div class="total">
+        <span>Total</span>
+        <span id="total">$0</span>
+      </div>
+      <button class="primary full" id="chargeButton" onclick="openPayment()">Cobrar</button>
+      <button class="secondary full" onclick="clearTicket()">Cancelar venta</button>
+    </div>
+  </section>
+
+  <section id="payment" class="panel hidden">
+    <h2>Procesar cobro</h2>
+    <p>Total a pagar:</p>
+    <h2 id="paymentTotal">$0</h2>
+    <label for="paymentMethod">Método de pago</label>
+    <select id="paymentMethod" onchange="updatePayment()">
+      <option value="Efectivo">Efectivo</option>
+      <option value="Tarjeta">Tarjeta</option>
+      <option value="Transferencia">Transferencia</option>
+    </select>
+    <div id="cashArea">
+      <label for="received">Monto recibido</label>
+      <input type="number" id="received" min="0" placeholder="Ej: 10000" oninput="updatePayment()">
+      <div class="notice">Vuelto: <strong id="change">$0</strong></div>
+    </div>
+    <button class="primary" onclick="confirmSale()">Confirmar venta</button>
+    <button class="secondary" onclick="showScreen('sales')">Volver</button>
+    <div id="paymentError" class="notice error hidden"></div>
+  </section>
+
+  <section id="confirmation" class="panel hidden">
+    <h2>✅ Venta registrada</h2>
+    <p>La operación se completó correctamente.</p>
+    <div id="receipt" class="notice"></div>
+    <button class="primary" onclick="showScreen('sales')">Nueva venta</button>
+  </section>
+
+  <section id="admin" class="panel hidden">
+    <h2>Panel de administración</h2>
+    <div class="stats">
+      <div class="stat">Ventas realizadas<strong id="saleCount">0</strong></div>
+      <div class="stat">Total vendido<strong id="revenue">$0</strong></div>
+      <div class="stat">Productos vendidos<strong id="unitsSold">0</strong></div>
+    </div>
+    <h2>Inventario</h2>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Producto</th><th>Precio</th><th>Stock</th></tr></thead>
+        <tbody id="inventory"></tbody>
+      </table>
+    </div>
+    <h2 style="margin-top:25px">Historial de ventas</h2>
+    <div id="history"></div>
+  </section>
+</main>
+
+<script>
+const products = [
+  {id:1,name:"Marraqueta",category:"Panes",price:2200,stock:30,emoji:"🥖"},
+  {id:2,name:"Hallulla",category:"Panes",price:2000,stock:25,emoji:"🍞"},
+  {id:3,name:"Pan amasado",category:"Panes",price:500,stock:20,emoji:"🥯"},
+  {id:4,name:"Bebida cola",category:"Bebidas",price:1500,stock:15,emoji:"🥤"},
+  {id:5,name:"Agua mineral",category:"Bebidas",price:1000,stock:20,emoji:"💧"},
+  {id:6,name:"Leche",category:"Lácteos",price:1300,stock:12,emoji:"🥛"},
+  {id:7,name:"Yogur",category:"Lácteos",price:650,stock:18,emoji:"🥣"},
+  {id:8,name:"Papas fritas",category:"Snacks",price:1200,stock:10,emoji:"🍟"},
+  {id:9,name:"Galletas",category:"Snacks",price:800,stock:0,emoji:"🍪"}
+];
+
+let cart = {};
+let sales = [];
+let category = "Todos";
+
+const money = n => "$" + n.toLocaleString("es-CL");
+const getProduct = id => products.find(p => p.id === Number(id));
+const total = () => Object.entries(cart).reduce(
+  (sum,[id,qty]) => sum + getProduct(id).price * qty, 0
+);
+
+function showScreen(id) {
+  ["sales","payment","confirmation","admin"].forEach(name => {
+    document.getElementById(name).classList.toggle("hidden",name !== id);
+  });
+  if(id === "admin") renderAdmin();
+}
+
+function renderCategories() {
+  const categories = ["Todos","Panes","Bebidas","Lácteos","Snacks"];
+  document.getElementById("categories").innerHTML = categories.map(c =>
+    `<button class="${category === c ? "active" : "secondary"}"
+      onclick="setCategory('${c}')">${c}</button>`
+  ).join("");
+}
+
+function setCategory(c) {
+  category = c;
+  renderCategories();
+  renderProducts();
+}
+
+function renderProducts() {
+  const query = document.getElementById("search").value.toLowerCase();
+  const filtered = products.filter(p =>
+    (category === "Todos" || p.category === category) &&
+    p.name.toLowerCase().includes(query)
+  );
+  document.getElementById("products").innerHTML = filtered.map(p => `
+    <button class="product" onclick="addProduct(${p.id})">
+      <span class="emoji">${p.emoji}</span>
+      <strong>${p.name}</strong>
+      <div>${money(p.price)}</div>
+      <small>Stock: ${p.stock}</small>
+    </button>
+  `).join("") || "<p>No se encontraron productos.</p>";
+}
+
+function addProduct(id) {
+  const p = getProduct(id);
+  const quantity = cart[id] || 0;
+  if(quantity >= p.stock) {
+    alert("Stock insuficiente: no hay más unidades disponibles de " + p.name);
+    return;
+  }
+  cart[id] = quantity + 1;
+  renderTicket();
+}
+
+function changeQuantity(id,delta) {
+  const next = (cart[id] || 0) + delta;
+  if(next > getProduct(id).stock) {
+    alert("Stock insuficiente.");
+    return;
+  }
+  if(next <= 0) delete cart[id];
+  else cart[id] = next;
+  renderTicket();
+}
+
+function renderTicket() {
+  const entries = Object.entries(cart);
+  document.getElementById("ticket").innerHTML = entries.length
+    ? entries.map(([id,qty]) => {
+        const p = getProduct(id);
+        return `<div class="ticket-item">
+          <div class="line"><strong>${p.name}</strong><span>${money(p.price * qty)}</span></div>
+          <div class="controls">
+            <button class="secondary" onclick="changeQuantity(${id},-1)">−</button>
+            <span>${qty}</span>
+            <button class="secondary" onclick="changeQuantity(${id},1)">+</button>
+            <button class="danger" onclick="changeQuantity(${id},-${qty})">Eliminar</button>
+          </div>
+        </div>`;
+      }).join("")
+    : "<p>No hay productos agregados.</p>";
+  document.getElementById("total").textContent = money(total());
+  document.getElementById("chargeButton").disabled = entries.length === 0;
+}
+
+function clearTicket() {
+  if(Object.keys(cart).length && !confirm("¿Cancelar esta venta?")) return;
+  cart = {};
+  renderTicket();
+}
+
+function openPayment() {
+  if(!Object.keys(cart).length) return;
+  document.getElementById("paymentTotal").textContent = money(total());
+  document.getElementById("received").value = "";
+  document.getElementById("paymentMethod").value = "Efectivo";
+  document.getElementById("paymentError").classList.add("hidden");
+  updatePayment();
+  showScreen("payment");
+}
+
+function updatePayment() {
+  const cash = document.getElementById("paymentMethod").value === "Efectivo";
+  document.getElementById("cashArea").classList.toggle("hidden",!cash);
+  const received = Number(document.getElementById("received").value);
+  document.getElementById("change").textContent = money(Math.max(0,received-total()));
+}
+
+function confirmSale() {
+  const method = document.getElementById("paymentMethod").value;
+  const received = Number(document.getElementById("received").value);
+  const error = document.getElementById("paymentError");
+  if(method === "Efectivo" && received < total()) {
+    error.textContent = "El monto recibido es insuficiente.";
+    error.classList.remove("hidden");
+    return;
+  }
+  if(!confirm("¿Confirmar el registro de esta venta?")) return;
+
+  const amount = total();
+  const items = Object.entries(cart).map(([id,qty]) => ({
+    name:getProduct(id).name,qty,price:getProduct(id).price
+  }));
+  Object.entries(cart).forEach(([id,qty]) => getProduct(id).stock -= qty);
+  const sale = {
+    number:sales.length+1,
+    date:new Date().toLocaleString("es-CL"),
+    amount,method,items,
+    change:method === "Efectivo" ? received-amount : 0
+  };
+  sales.push(sale);
+  document.getElementById("receipt").innerHTML =
+    `<strong>Venta N.º ${sale.number}</strong><p>${sale.date}</p>
+     <p>Medio de pago: ${method}</p>
+     <p>Total: ${money(amount)}</p>
+     <p>Vuelto: ${money(sale.change)}</p>
+     <small>Comprobante de demostración, no válido como boleta tributaria.</small>`;
+  cart = {};
+  renderTicket();
+  renderProducts();
+  showScreen("confirmation");
+}
+
+function renderAdmin() {
+  document.getElementById("saleCount").textContent = sales.length;
+  document.getElementById("revenue").textContent =
+    money(sales.reduce((s,v)=>s+v.amount,0));
+  document.getElementById("unitsSold").textContent =
+    sales.reduce((s,v)=>s+v.items.reduce((a,i)=>a+i.qty,0),0);
+  document.getElementById("inventory").innerHTML = products.map(p =>
+    `<tr><td>${p.name}</td><td>${money(p.price)}</td>
+     <td>${p.stock === 0 ? "⚠️ Agotado" : p.stock}</td></tr>`
+  ).join("");
+  document.getElementById("history").innerHTML = sales.length
+    ? sales.map(s=>`<p>Venta #${s.number} — ${money(s.amount)} — ${s.method}</p>`).join("")
+    : "<p>Aún no hay ventas registradas.</p>";
+}
+
+renderCategories();
+renderProducts();
+renderTicket();
+</script>
+</body>
+</html>
